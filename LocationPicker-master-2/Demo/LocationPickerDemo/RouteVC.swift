@@ -8,13 +8,12 @@
 
 import UIKit
 import MapKit
-import LocationPicker
 import CoreLocation
 
 class RouteVC: UIViewController , MKMapViewDelegate {
     @IBOutlet weak var mapView: MKMapView!
     var sourceLocation: Location?
-    var destinationLocation: Location? 
+    var destinationLocation: Location?
     override func viewDidLoad() {
         super.viewDidLoad()
         self.mapView.delegate = self

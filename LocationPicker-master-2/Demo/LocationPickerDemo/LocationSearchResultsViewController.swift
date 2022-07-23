@@ -9,12 +9,13 @@
 import UIKit
 import MapKit
 
+//@available(iOS 9.3, *)
 class LocationSearchResultsViewController: UITableViewController {
-	var locations: [Location] = []
-	var onSelectLocation: ((Location) -> ())?
+	//var locations: [Location] = []
+	var onSelectLocation: ((MKLocalSearchCompletion) -> ())?
 	var isShowingHistory = false
 	var searchHistoryLabel: String?
-    var 
+    var locations : [MKLocalSearchCompletion] = [MKLocalSearchCompletion]()
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -34,8 +35,8 @@ class LocationSearchResultsViewController: UITableViewController {
 			?? UITableViewCell(style: .subtitle, reuseIdentifier: "LocationCell")
 
 		let location = locations[indexPath.row]
-		cell.textLabel?.text = location.name
-		cell.detailTextLabel?.text = location.address
+        cell.textLabel?.text = location.title
+        cell.detailTextLabel?.text = location.subtitle
 		
 		return cell
 	}

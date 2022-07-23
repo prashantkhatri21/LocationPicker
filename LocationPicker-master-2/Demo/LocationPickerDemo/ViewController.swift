@@ -7,11 +7,10 @@
 //
 
 import UIKit
-import LocationPicker
 import CoreLocation
 import MapKit
 
-@available(iOS 9.3, *)
+//@available(iOS 9.3, *)
 class ViewController: UIViewController {
     
     @IBOutlet weak var destinationButton: UIButton!
@@ -36,9 +35,9 @@ class ViewController: UIViewController {
 	
 	override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let locationPicker = segue.destination as! LocationPickerViewController
-        locationPicker.showCurrentLocationButton = true
-        locationPicker.useCurrentLocationAsHint = true
-        locationPicker.selectCurrentLocationInitially = true
+        locationPicker.showCurrentLocationButton = false
+        locationPicker.useCurrentLocationAsHint = false
+        locationPicker.selectCurrentLocationInitially = false
 
 		if segue.identifier == "Source" {
             locationPicker.location = sourceLocation

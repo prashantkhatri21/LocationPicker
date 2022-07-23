@@ -10,8 +10,7 @@ import UIKit
 import MapKit
 import CoreLocation
 
-@available(iOS 9.3, *)
-open class LocationPickerViewController: UIViewController {
+ class LocationPickerViewController: UIViewController {
 	struct CurrentLocationListener {
 		let once: Bool
 		let action: (CLLocation) -> ()
@@ -66,7 +65,7 @@ open class LocationPickerViewController: UIViewController {
     @available(iOS 13.0, *)
     public lazy var searchTextFieldColor: UIColor = .clear
 	
-	public var mapType: MKMapType = .hybrid {
+	public var mapType: MKMapType = .standard {
 		didSet {
 			if isViewLoaded {
 				mapView.mapType = mapType
@@ -77,8 +76,11 @@ open class LocationPickerViewController: UIViewController {
 	public var location: Location? {
 		didSet {
 			if isViewLoaded {
-				searchBar.text = location.flatMap({ $0.title }) ?? ""
-				updateAnnotation()
+                DispatchQueue.main.async {
+                    self.searchBar.text = self.location.flatMap({ $0.title }) ?? ""
+                    self.updateAnnotation()
+                }
+				
 			}
 		}
 	}
@@ -98,7 +100,37 @@ open class LocationPickerViewController: UIViewController {
 	
 	lazy var results: LocationSearchResultsViewController = {
 		let results = LocationSearchResultsViewController()
-		results.onSelectLocation = { [weak self] in self?.selectedLocation($0) }
+		results.onSelectLocation = { [weak self] in
+            
+//            let result = searchResults[indexPath.row]
+                    let searchRequest = MKLocalSearch.Request(completion: $0)
+
+                    let search = MKLocalSearch(request: searchRequest)
+                    search.start { (response, error) in
+                        guard let coordinate = response?.mapItems[0].placemark.coordinate else {
+                            return
+                        }
+
+                        guard let name = response?.mapItems[0].name else {
+                            return
+                        }
+                        guard let placemark = response?.mapItems[0].placemark else {
+                            return
+                        }
+                        var locationObj = Location(name: name, placemark: placemark)
+                        let lat = coordinate.latitude
+                        let lon = coordinate.longitude
+                        self?.selectedLocation(locationObj)
+
+                        print(lat)
+                        print(lon)
+                                    print(name)
+
+                    }
+            
+            
+            
+        }
 		results.searchHistoryLabel = self.searchHistoryLabel
 		return results
 	}()
@@ -164,13 +196,6 @@ open class LocationPickerViewController: UIViewController {
 		searchBar.delegate = self
         
         searchCompleter.delegate = self
-		
-		// gesture recognizer for adding by tap
-        let locationSelectGesture = UILongPressGestureRecognizer(
-            target: self, action: #selector(addLocation(_:)))
-        locationSelectGesture.delegate = self
-		mapView.addGestureRecognizer(locationSelectGesture)
-
 		// search
         if #available(iOS 11.0, *) {
             navigationItem.searchController = searchController
@@ -256,8 +281,12 @@ open class LocationPickerViewController: UIViewController {
 	func updateAnnotation() {
 		mapView.removeAnnotations(mapView.annotations)
 		if let location = location {
-			mapView.addAnnotation(location)
-			mapView.selectAnnotation(location, animated: true)
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = location.coordinate
+            annotation.title = location.title
+//            annotation.subtitle = location.su
+			mapView.addAnnotation(annotation)
+			//mapView.selectAnnotation(location, animated: true)
 		}
 	}
 	
@@ -271,7 +300,6 @@ open class LocationPickerViewController: UIViewController {
         let annotation = MKPointAnnotation()
         annotation.coordinate = location.coordinate
         mapView.addAnnotation(annotation)
-
         geocoder.cancelGeocode()
         geocoder.reverseGeocodeLocation(location) { response, error in
             if let error = error as NSError?, error.code != 10 { // ignore cancelGeocode errors
@@ -279,7 +307,7 @@ open class LocationPickerViewController: UIViewController {
                 let alert = UIAlertController(title: nil, message: error.localizedDescription, preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: { _ in }))
                 self.present(alert, animated: true) {
-                    self.mapView.removeAnnotation(annotation)
+                   // self.mapView.removeAnnotation(annotation)
                 }
             } else if let placemark = response?.first {
                 // get POI name from placemark if any
@@ -290,9 +318,10 @@ open class LocationPickerViewController: UIViewController {
             }
         }
     }
+     
 }
 
-@available(iOS 9.3, *)
+//@available(iOS 9.3, *)
 extension LocationPickerViewController: CLLocationManagerDelegate {
 	public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
 		guard let location = locations.first else { return }
@@ -304,7 +333,7 @@ extension LocationPickerViewController: CLLocationManagerDelegate {
 
 // MARK: Searching
 
-@available(iOS 9.3, *)
+//@available(iOS 9.3, *)
 extension LocationPickerViewController: UISearchResultsUpdating {
 	public func updateSearchResults(for searchController: UISearchController) {
 		guard let term = searchController.searchBar.text else { return }
@@ -312,50 +341,23 @@ extension LocationPickerViewController: UISearchResultsUpdating {
 		searchTimer?.invalidate()
 
 		let searchTerm = term.trimmingCharacters(in: CharacterSet.whitespaces)
-		
-		if searchTerm.isEmpty {
-			results.locations = historyManager.history()
-			results.isShowingHistory = true
-			results.tableView.reloadData()
-		} else {
-			// clear old results
-			showItemsForSearchResult(nil)
 			
 			searchTimer = Timer.scheduledTimer(timeInterval: 0.2,
 				target: self, selector: #selector(LocationPickerViewController.searchFromTimer(_:)),
 				userInfo: [LocationPickerViewController.SearchTermKey: searchTerm],
 				repeats: false)
-		}
 	}
 	
     @objc func searchFromTimer(_ timer: Timer) {
 		guard let userInfo = timer.userInfo as? [String: AnyObject],
 			let term = userInfo[LocationPickerViewController.SearchTermKey] as? String
 			else { return }
-		
-        
         searchCompleter.queryFragment = term
-
-        
-        /*
-		let request = MKLocalSearch.Request()
-		request.naturalLanguageQuery = term
-		
-		if let location = locationManager.location, useCurrentLocationAsHint {
-			request.region = MKCoordinateRegion(center: location.coordinate,
-				span: MKCoordinateSpan(latitudeDelta: 2, longitudeDelta: 2))
-		}
-		
-		localSearch?.cancel()
-		localSearch = MKLocalSearch(request: request)
-		localSearch!.start { response, _ in
-			self.showItemsForSearchResult(response)
-		}
-         */
 	}
 	
 	func showItemsForSearchResult(_ searchResult: [MKLocalSearchCompletion]) {
-		results.locations = searchResult?.map { Location(name: $0.title, placemark: $0.placemark) } ?? []
+        print(searchResult)
+        results.locations = searchResult
 		results.isShowingHistory = false
 		results.tableView.reloadData()
 	}
@@ -366,7 +368,6 @@ extension LocationPickerViewController: UISearchResultsUpdating {
 			// set location, this also adds annotation
 			self.location = location
 			self.showCoordinates(location.coordinate)
-			
 			self.historyManager.addToHistory(location)
 		}
 	}
@@ -374,24 +375,9 @@ extension LocationPickerViewController: UISearchResultsUpdating {
 
 // MARK: Selecting location with gesture
 
-@available(iOS 9.3, *)
-extension LocationPickerViewController  {
-    @objc func addLocation(_ gestureRecognizer: UIGestureRecognizer) {
-		if gestureRecognizer.state == .began {
-			let point = gestureRecognizer.location(in: mapView)
-			let coordinates = mapView.convert(point, toCoordinateFrom: mapView)
-			let location = CLLocation(latitude: coordinates.latitude, longitude: coordinates.longitude)
-			
-			// clean location, cleans out old annotation too
-			self.location = nil
-            selectLocation(location: location)
-		}
-	}
-    
-    
-}
 
-@available(iOS 9.3, *)
+
+//@available(iOS 9.3, *)
 extension LocationPickerViewController : MKLocalSearchCompleterDelegate {
     // This method declares gets called whenever the searchCompleter has new search results
     // If you wanted to do any filter of the locations that are displayed on the the table view
@@ -413,24 +399,79 @@ extension LocationPickerViewController : MKLocalSearchCompleterDelegate {
 
 // MARK: MKMapViewDelegate
 
-@available(iOS 9.3, *)
+
 extension LocationPickerViewController: MKMapViewDelegate {
-	public func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+	 func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
 		if annotation is MKUserLocation { return nil }
-		
-		let pin = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "annotation")
-        if #available(iOS 9.0, *) {
-            pin.pinTintColor = .green
-        } else {
-            // Fallback on earlier versions
+//        var pin = mapView.dequeueReusableAnnotationView(withIdentifier: "annotation") as? MKPinAnnotationView
+         
+         var pin = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "annotation")
+
+
+//		let pin = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "annotation")
+        if pin == nil {
+            pin = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "annotation")
         }
-		// drop only on long press gesture
-		let fromLongPress = annotation is MKPointAnnotation
-		pin.animatesDrop = fromLongPress
-		pin.rightCalloutAccessoryView = selectLocationButton()
-		pin.canShowCallout = !fromLongPress
+        else {
+            pin.annotation = annotation
+        }
+         pin.pinTintColor = .purple
+         pin.isDraggable = true
+         pin.canShowCallout = true
+         pin.animatesDrop = true
+         pin.rightCalloutAccessoryView = selectLocationButton()
 		return pin
 	}
+    
+     func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
+        if newState == MKAnnotationView.DragState.ending {
+            let droppedAt = view.annotation?.coordinate
+            print(droppedAt.debugDescription)
+            let location = CLLocation(latitude: (view.annotation?.coordinate.latitude)!, longitude: (view.annotation?.coordinate.longitude)!)
+            
+            geocoder.cancelGeocode()
+            geocoder.reverseGeocodeLocation(location) { response, error in
+                if let error = error as NSError?, error.code != 10 { // ignore cancelGeocode errors
+                    // show error and remove annotation
+                    let alert = UIAlertController(title: nil, message: error.localizedDescription, preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: { _ in }))
+                    self.present(alert, animated: true) {
+                       // self.mapView.removeAnnotation(annotation)
+                    }
+                } else if let placemark = response?.first {
+                    // get POI name from placemark if any
+                    let name = placemark.areasOfInterest?.first
+//                    let annotation = MKPointAnnotation()
+//                    annotation.coordinate = view.annotation!.coordinate
+//                    annotation.title = name
+                    self.location = Location(name: name, location: location, placemark: placemark)
+
+//                    mapView.addAnnotation(annotation)
+
+                    
+                    
+                    // pass user selected location too
+   //                 self.location = Location(name: name, location: location, placemark: placemark)
+                }
+            }
+            
+//            selectLocation(location: location)
+        }
+    }
+    
+//    public func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState)
+//        {
+//            if (newState == MKAnnotationView.DragState.ending)
+//            {
+//                let droppedAt = view.annotation?.coordinate
+//                print("dropped at : ", droppedAt?.latitude ?? 0.0, droppedAt?.longitude ?? 0.0);
+//                view.setDragState(.none, animated: true)
+//            }
+//            if (newState == .canceling )
+//            {
+//                view.setDragState(.none, animated: true)
+//            }
+//        }
 	
 	func selectLocationButton() -> UIButton {
 		let button = UIButton(frame: CGRect(x: 0, y: 0, width: 70, height: 30))
@@ -443,7 +484,7 @@ extension LocationPickerViewController: MKMapViewDelegate {
 		return button
 	}
 	
-	public func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+	 func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
 		completion?(location)
 		if let navigation = navigationController, navigation.viewControllers.count > 1 {
 			navigation.popViewController(animated: true)
@@ -452,26 +493,30 @@ extension LocationPickerViewController: MKMapViewDelegate {
 		}
 	}
 	
-	public func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
-		let pins = mapView.annotations.filter { $0 is MKPinAnnotationView }
-		assert(pins.count <= 1, "Only 1 pin annotation should be on map at a time")
-
-        if let userPin = views.first(where: { $0.annotation is MKUserLocation }) {
-            userPin.canShowCallout = false
-        }
-	}
-}
-
-@available(iOS 9.3, *)
-extension LocationPickerViewController: UIGestureRecognizerDelegate {
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return false
+//	public func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+//		let pins = mapView.annotations.filter { $0 is MKPinAnnotationView }
+//		//assert(pins.count <= 1, "Only 1 pin annotation should be on map at a time")
+//
+//        if let userPin = views.first(where: { $0.annotation is MKUserLocation }) {
+//            userPin.canShowCallout = true
+//        }
+//	}
+    
+     func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+        print(#function)
     }
 }
 
+////@available(iOS 9.3, *)
+//extension LocationPickerViewController: UIGestureRecognizerDelegate {
+//    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+//        return true
+//    }
+//}
+
 // MARK: UISearchBarDelegate
 
-@available(iOS 9.3, *)
+//@available(iOS 9.3, *)
 extension LocationPickerViewController: UISearchBarDelegate {
 	public func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
 		// dirty hack to show history when there is no text in search bar
