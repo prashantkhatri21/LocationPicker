@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>395772964059-ecf4pq55g0v8plbnu2u2gnasc3mtcv23.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.395772964059-ecf4pq55g0v8plbnu2u2gnasc3mtcv23</string>
+	<key>API_KEY</key>
+	<string>AIzaSyD4lJmg6FGV9kU8UqzNpDTvkSMkOCxnFtc</string>
+	<key>GCM_SENDER_ID</key>
+	<string>395772964059</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.scholacore.mapUpdate</string>
+	<key>PROJECT_ID</key>
+	<string>second-raceway-613</string>
+	<key>STORAGE_BUCKET</key>
+	<string>second-raceway-613.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:395772964059:ios:feb18eebc1a03ab496f0fe</string>
+	<key>DATABASE_URL</key>
+	<string>https://second-raceway-613.firebaseio.com</string>
+</dict>
+</plist>
